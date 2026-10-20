@@ -1,0 +1,39 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+config.local.yml
+config.local.yaml
+
+# Go build and test artifacts
+/Finance
+/Finance.exe
+/bin/
+/build/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+/coverage/
+coverage.html
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+/tmp/
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
