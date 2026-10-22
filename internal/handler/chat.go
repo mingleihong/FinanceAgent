@@ -2,6 +2,7 @@ package handler
 
 import (
 	"Finance/internal/service"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,6 @@ type ChatHandler struct {
 }
 
 func NewChatHandler(chatService *service.ChatService) *ChatHandler {
-
 	return &ChatHandler{
 		chatService: chatService,
 	}
@@ -33,6 +33,7 @@ func (chat *ChatHandler) Chat(c *gin.Context) {
 
 	data, err := chat.chatService.Chat(c.Request.Context(), req.Prompt)
 	if err != nil {
+		log.Printf("Error in chat service: %v\n", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"success": "wrong",
 		})

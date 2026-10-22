@@ -8,21 +8,21 @@ import (
 )
 
 type ChatService struct {
-	llm *core.LLM
+	Agent *core.Agent
 }
 
-func NewChatService(llm *core.LLM) *ChatService {
+func NewChatService(agent *core.Agent) *ChatService {
 	return &ChatService{
-		llm: llm,
+		Agent: agent,
 	}
 }
 
 func (chat *ChatService) Chat(ctx context.Context, prompt string) (string, error) {
-	data, err := chat.llm.Chat(ctx, []openai.ChatCompletionMessageParamUnion{
+	data, err := chat.Agent.Run(ctx, []openai.ChatCompletionMessageParamUnion{
 		openai.UserMessage(prompt),
-	}, nil)
+	})
 	if err != nil {
 		return "", err
 	}
-	return data.Content, nil
+	return data, nil
 }
