@@ -15,8 +15,8 @@ type Registry struct {
 	tools map[string]Tool
 }
 
-func NewRegistry() *Registry {
-	return &Registry{
+func NewRegistry() Registry {
+	return Registry{
 		tools: make(map[string]Tool),
 	}
 }

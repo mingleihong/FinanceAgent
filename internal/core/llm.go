@@ -1,7 +1,6 @@
 package core
 
 import (
-	"Finance/internal/tool"
 	"context"
 	"errors"
 	"fmt"
@@ -13,10 +12,9 @@ import (
 type LLM struct {
 	client openai.Client
 	model  string
-	tools  *tool.Registry
 }
 
-func NewLLM(cfg *LLMConfig, tools *tool.Registry) *LLM {
+func NewLLM(cfg *LLMConfig) *LLM {
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
 		option.WithBaseURL(cfg.BaseURL),
@@ -24,23 +22,24 @@ func NewLLM(cfg *LLMConfig, tools *tool.Registry) *LLM {
 	return &LLM{
 		client: client,
 		model:  cfg.Model,
-		tools:  tools,
 	}
 }
 
-// Chat returns the first choice's complete text response.
-func (l *LLM) Chat(ctx context.Context, messages []openai.ChatCompletionMessageParamUnion) (string, error) {
+// Chat returns the first choice's complete message, including any tool calls.
+// Pass nil tools for a request without tool definitions.
+func (l *LLM) Chat(ctx context.Context, messages []openai.ChatCompletionMessageParamUnion, tools []openai.ChatCompletionToolUnionParam) (*openai.ChatCompletionMessage, error) {
 	completion, err := l.client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Model:    l.model,
 		Messages: messages,
+		Tools:    tools,
 	})
 	if err != nil {
-		return "", fmt.Errorf("chat: %w", err)
+		return nil, fmt.Errorf("chat: %w", err)
 	}
 	if len(completion.Choices) == 0 {
-		return "", errors.New("chat: response contains no choices")
+		return nil, errors.New("chat: response contains no choices")
 	}
-	return completion.Choices[0].Message.Content, nil
+	return &completion.Choices[0].Message, nil
 }
 
 // StreamChat synchronously delivers non-empty text deltas from the first choice.

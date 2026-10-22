@@ -20,9 +20,9 @@ func NewChatService(llm *core.LLM) *ChatService {
 func (chat *ChatService) Chat(ctx context.Context, prompt string) (string, error) {
 	data, err := chat.llm.Chat(ctx, []openai.ChatCompletionMessageParamUnion{
 		openai.UserMessage(prompt),
-	})
+	}, nil)
 	if err != nil {
 		return "", err
 	}
-	return data, nil
+	return data.Content, nil
 }

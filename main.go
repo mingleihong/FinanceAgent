@@ -5,7 +5,6 @@ import (
 	"Finance/internal/handler"
 	"Finance/internal/router"
 	"Finance/internal/service"
-	"Finance/internal/tool"
 )
 
 func main() {
@@ -13,11 +12,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tools := tool.NewRegistry()
-	if err := tools.Register(tool.NewCurrentTimeTool()); err != nil {
-		panic(err)
-	}
-	llm := core.NewLLM(cfg, tools)
+	llm := core.NewLLM(cfg)
 	chatService := service.NewChatService(llm)
 	chatHandler := handler.NewChatHandler(chatService)
 
