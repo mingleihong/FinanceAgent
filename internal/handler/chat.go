@@ -26,7 +26,8 @@ func (chat *ChatHandler) Chat(c *gin.Context) {
 	var req chatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"success": "wrong",
+			"code":    1,
+			"message": "wrong request parameters",
 		})
 		return
 	}
@@ -35,12 +36,14 @@ func (chat *ChatHandler) Chat(c *gin.Context) {
 	if err != nil {
 		log.Printf("Error in chat service: %v\n", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"success": "wrong",
+			"code":    1,
+			"message": "wrong service",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"success": 1,
+		"code":    0,
+		"message": "success",
 		"data":    data,
 	})
 }
