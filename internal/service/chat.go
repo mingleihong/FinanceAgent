@@ -17,12 +17,8 @@ func NewChatService(agent *core.Agent) *ChatService {
 	}
 }
 
-func (chat *ChatService) Chat(ctx context.Context, prompt string) (string, error) {
-	data, err := chat.Agent.Run(ctx, []openai.ChatCompletionMessageParamUnion{
+func (chat *ChatService) Chat(ctx context.Context, prompt string, onDelta func(event string, content string) error) error {
+	return chat.Agent.Run(ctx, []openai.ChatCompletionMessageParamUnion{
 		openai.UserMessage(prompt),
-	})
-	if err != nil {
-		return "", err
-	}
-	return data, nil
+	}, onDelta)
 }

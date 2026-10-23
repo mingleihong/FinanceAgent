@@ -21,6 +21,12 @@ export default function MessageItem({ message }: MessageItemProps) {
         🤖
       </span>
       <div className="bubble">
+        {message.reasoning_content && (
+          <details className="reasoning" open>
+            <summary>思考内容</summary>
+            <div className="reasoning-content">{message.reasoning_content}</div>
+          </details>
+        )}
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
@@ -31,8 +37,13 @@ export default function MessageItem({ message }: MessageItemProps) {
         >
           {message.content}
         </ReactMarkdown>
+        {message.streaming && (
+          <p className="stream-status" role="status">
+            {message.content ? '正在生成回答…' : message.reasoning_content ? '思考中…' : '正在等待模型响应…'}
+          </p>
+        )}
         {message.error && (
-          <p className="error-note">（请求失败，请稍后重试）</p>
+          <p className="error-note" role="alert">{message.error}</p>
         )}
       </div>
     </div>

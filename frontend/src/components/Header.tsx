@@ -11,10 +11,6 @@ export default function Header() {
             <p className="brand-tagline">AI 金融建议助手</p>
           </div>
         </div>
-        <span className="status">
-          <span className="status-dot" aria-hidden="true" />
-          在线
-        </span>
       </div>
     </header>
   )

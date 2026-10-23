@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -25,48 +26,57 @@ func NewLLM(cfg *LLMConfig) *LLM {
 	}
 }
 
-// Chat returns the first choice's complete message, including any tool calls.
-// Pass nil tools for a request without tool definitions.
-func (l *LLM) Chat(ctx context.Context, messages []openai.ChatCompletionMessageParamUnion, tools []openai.ChatCompletionToolUnionParam) (*openai.ChatCompletionMessage, error) {
-	completion, err := l.client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:    l.model,
-		Messages: messages,
-		Tools:    tools,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("chat: %w", err)
-	}
-	if len(completion.Choices) == 0 {
-		return nil, errors.New("chat: response contains no choices")
-	}
-	return &completion.Choices[0].Message, nil
-}
-
-// StreamChat synchronously delivers non-empty text deltas from the first choice.
-// A callback error stops the stream. Text already delivered remains valid if an
-// error occurs, but may be incomplete. Callers can cancel via ctx.
-func (l *LLM) StreamChat(ctx context.Context, messages []openai.ChatCompletionMessageParamUnion, onDelta func(string) error) error {
+// StreamChat streams reasoning and answer deltas while accumulating a message for
+// the agent's next tool round. Thinking text is read only from reasoning_content.
+func (l *LLM) StreamChat(ctx context.Context, messages []openai.ChatCompletionMessageParamUnion, tools []openai.ChatCompletionToolUnionParam, onDelta func(event string, content string) error) (*openai.ChatCompletionMessage, error) {
 	stream := l.client.Chat.Completions.NewStreaming(
 		ctx,
 		openai.ChatCompletionNewParams{
 			Model:    l.model,
 			Messages: messages,
+			Tools:    tools,
 		},
 	)
 	defer stream.Close()
+	var accumulator openai.ChatCompletionAccumulator
 
 	for stream.Next() {
 		chunk := stream.Current()
-		if len(chunk.Choices) == 0 || chunk.Choices[0].Delta.Content == "" {
+		if !accumulator.AddChunk(chunk) {
+			return nil, errors.New("stream chat: invalid completion chunk")
+		}
+		if len(chunk.Choices) == 0 {
 			continue
 		}
-		if err := onDelta(chunk.Choices[0].Delta.Content); err != nil {
-			return fmt.Errorf("stream chat callback: %w", err)
+		choice := chunk.Choices[0]
+		if field, ok := choice.Delta.JSON.ExtraFields["reasoning_content"]; ok {
+			var text string
+			if err := json.Unmarshal([]byte(field.Raw()), &text); err == nil && text != "" {
+				if err := onDelta("reasoning_content", text); err != nil {
+					return nil, fmt.Errorf("stream chat callback: %w", err)
+				}
+			}
+		}
+		text := choice.Delta.Content
+		if text == "" {
+			text = choice.Delta.Refusal
+		}
+		if text != "" {
+			if err := onDelta("content", text); err != nil {
+				return nil, fmt.Errorf("stream chat callback: %w", err)
+			}
 		}
 	}
 
 	if err := stream.Err(); err != nil {
-		return fmt.Errorf("stream chat: %w", err)
+		return nil, fmt.Errorf("stream chat: %w", err)
 	}
-	return nil
+	if len(accumulator.Choices) == 0 {
+		return nil, errors.New("stream chat: response contains no choices")
+	}
+	choice := accumulator.Choices[0]
+	if choice.FinishReason != "stop" && choice.FinishReason != "tool_calls" {
+		return nil, fmt.Errorf("stream chat: incomplete response (finish reason %q)", choice.FinishReason)
+	}
+	return &choice.Message, nil
 }

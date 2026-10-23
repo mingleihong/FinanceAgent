@@ -92,22 +92,6 @@ body {
   color: var(--text-secondary);
 }
 
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
-}
-
 /* ---------- 会话区 ---------- */
 .chat {
   flex: 1;
@@ -272,44 +256,29 @@ body {
 }
 
 /* ---------- 思考中指示 ---------- */
-.thinking {
-  display: flex;
-  align-items: center;
-  min-height: 30px;
+.reasoning {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
-.thinking-dots {
-  display: flex;
-  gap: 5px;
+.reasoning summary {
+  cursor: pointer;
+  font-weight: 600;
 }
 
-.thinking-dots span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text-secondary);
-  animation: thinking-bounce 1.2s infinite ease-in-out;
+.reasoning-content {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-.thinking-dots span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.thinking-dots span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes thinking-bounce {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.45;
-  }
-  30% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
+.bubble .stream-status {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 /* ---------- 欢迎页 ---------- */
