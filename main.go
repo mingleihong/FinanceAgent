@@ -1,19 +1,21 @@
 package main
 
 import (
+	"Finance/internal/config"
 	"Finance/internal/core"
 	"Finance/internal/handler"
 	"Finance/internal/router"
 	"Finance/internal/service"
 	"Finance/internal/tool"
+	"fmt"
 )
 
 func main() {
-	cfg, err := core.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		panic(err)
 	}
-	llm := core.NewLLM(cfg)
+	llm := core.NewLLM(cfg.LLM)
 	registry := tool.NewRegistry()
 	registry.Register(tool.NewCurrentTimeTool())
 	agent := core.NewAgent(llm, registry)
@@ -21,7 +23,7 @@ func main() {
 	chatHandler := handler.NewChatHandler(chatService)
 
 	r := router.NewRouter(chatHandler)
-	if err = r.Run("localhost:8080"); err != nil {
+	if err = r.Run(fmt.Sprintf("%s:%d", cfg.App.Address, cfg.App.Port)); err != nil {
 		panic(err)
 	}
 }

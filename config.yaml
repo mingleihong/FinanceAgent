@@ -1,0 +1,8 @@
+llm:
+  api_key: 
+  base_url: 
+  model: 
+
+app:
+  address: 127.0.0.1
+  port: 8080

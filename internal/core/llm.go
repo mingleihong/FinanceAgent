@@ -1,6 +1,7 @@
 package core
 
 import (
+	"Finance/internal/config"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,7 +16,7 @@ type LLM struct {
 	model  string
 }
 
-func NewLLM(cfg *LLMConfig) *LLM {
+func NewLLM(cfg *config.LLMConfig) *LLM {
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
 		option.WithBaseURL(cfg.BaseURL),
