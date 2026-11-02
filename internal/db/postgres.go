@@ -13,7 +13,7 @@ import (
 
 // NewPostgresPool creates a shared pool and verifies the initial connection.
 // The caller must close the pool when the application shuts down.
-func NewPostgresPool(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, error) {
+func NewPostgresPool(ctx context.Context, cfg *config.PostgresConfig) (*pgxpool.Pool, error) {
 	connURL := url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(cfg.User, cfg.Password),
