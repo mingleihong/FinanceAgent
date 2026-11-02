@@ -12,14 +12,14 @@ import (
 const maxAgentSteps = 10
 
 type Agent struct {
-	LLM   *LLM
-	Tools tool.Registry
+	llm   *LLM
+	tools tool.Registry
 }
 
 func NewAgent(llm *LLM, tools tool.Registry) *Agent {
 	return &Agent{
-		LLM:   llm,
-		Tools: tools,
+		llm:   llm,
+		tools: tools,
 	}
 }
 
@@ -28,14 +28,14 @@ func NewAgent(llm *LLM, tools tool.Registry) *Agent {
 // Messages are copied so appending run history does not modify the caller's slice.
 func (a *Agent) Run(ctx context.Context, messages []openai.ChatCompletionMessageParamUnion, onDelta func(event string, content string) error) error {
 	history := append([]openai.ChatCompletionMessageParamUnion(nil), messages...)
-	definitions := a.Tools.Definitions()
+	definitions := a.tools.Definitions()
 
 	for step := 0; step < maxAgentSteps; step++ {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("agent: %w", err)
 		}
 
-		message, err := a.LLM.StreamChat(ctx, history, definitions, onDelta)
+		message, err := a.llm.StreamChat(ctx, history, definitions, onDelta)
 		if err != nil {
 			return fmt.Errorf("agent step %d: %w", step+1, err)
 		}
@@ -52,7 +52,7 @@ func (a *Agent) Run(ctx context.Context, messages []openai.ChatCompletionMessage
 			if call.Type != "function" {
 				return fmt.Errorf("agent: unsupported tool call type %q", call.Type)
 			}
-			result, err := a.Tools.Execute(ctx, call.Function.Name, json.RawMessage(call.Function.Arguments))
+			result, err := a.tools.Execute(ctx, call.Function.Name, json.RawMessage(call.Function.Arguments))
 			if err != nil {
 				return fmt.Errorf("agent tool call %q: %w", call.ID, err)
 			}

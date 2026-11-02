@@ -8,17 +8,17 @@ import (
 )
 
 type ChatService struct {
-	Agent *core.Agent
+	agent *core.Agent
 }
 
 func NewChatService(agent *core.Agent) *ChatService {
 	return &ChatService{
-		Agent: agent,
+		agent: agent,
 	}
 }
 
 func (chat *ChatService) Chat(ctx context.Context, prompt string, onDelta func(event string, content string) error) error {
-	return chat.Agent.Run(ctx, []openai.ChatCompletionMessageParamUnion{
+	return chat.agent.Run(ctx, []openai.ChatCompletionMessageParamUnion{
 		openai.UserMessage(prompt),
 	}, onDelta)
 }

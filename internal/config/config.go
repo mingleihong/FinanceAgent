@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
@@ -21,9 +22,23 @@ type AppConfig struct {
 	Port    int    `mapstructure:"port"`
 }
 
+type PostgresConfig struct {
+	User            string        `mapstructure:"user"`
+	Password        string        `mapstructure:"password"`
+	Host            string        `mapstructure:"host"`
+	Port            int           `mapstructure:"port"`
+	DB              string        `mapstructure:"db"`
+	ConnectTimeout  time.Duration `mapstructure:"connect_timeout"`
+	MaxConns        int32         `mapstructure:"max_conns"`
+	MinConns        int32         `mapstructure:"min_conns"`
+	MaxConnLifetime time.Duration `mapstructure:"max_conn_lifetime"`
+	MaxConnIdleTime time.Duration `mapstructure:"max_conn_idle_time"`
+}
+
 type Config struct {
-	LLM *LLMConfig `mapstructure:"llm"`
-	App *AppConfig `mapstructure:"app"`
+	LLM      *LLMConfig      `mapstructure:"llm"`
+	App      *AppConfig      `mapstructure:"app"`
+	Postgres *PostgresConfig `mapstructure:"postgres"`
 }
 
 func Load() (*Config, error) {

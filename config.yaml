@@ -6,3 +6,16 @@ llm:
 app:
   address: 127.0.0.1
   port: 8080
+
+postgres:
+  user: 
+  db: 
+  password: 
+  host: postgres
+  port: 5432
+  connect_timeout: 5s     # 每次新建连接的超时
+  
+  max_conns: 10           # 每个应用实例的连接数上限
+  min_conns: 0            # 后台维护的最小连接数，0 表示按需创建
+  max_conn_lifetime: 1h   # 连接最大存活时间，到期后回收
+  max_conn_idle_time: 30m # 连接最大空闲时间，后台定期回收
