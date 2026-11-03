@@ -2,6 +2,8 @@
 
 FROM golang:1.27.1 AS builder
 
+ENV GOPROXY=https://goproxy.cn,direct
+
 WORKDIR /src
 
 COPY go.mod go.sum ./
