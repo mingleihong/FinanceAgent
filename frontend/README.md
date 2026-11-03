@@ -25,6 +25,20 @@ npm run dev   # 打开 http://localhost:5173
 npm run build   # 产物输出到 dist/
 ```
 
+## Docker Compose 部署
+
+在项目根目录配置好现有 `.env` 后执行：
+
+```bash
+docker compose up -d --build
+```
+
+打开 `http://localhost`。前端镜像使用 Node 构建静态文件，由 Nginx 提供页面，
+并将 `/api/` 请求代理到 `backend:8080`，保留聊天的 SSE 流式输出。
+只有前端向宿主机开放 80 端口，后端和数据库通过 Compose 内部网络访问。
+后端继续使用现有 `.env` 和 `config.yaml`，无需新增环境变量。
+若修改 `config.yaml` 中的 `app.port`，需同步修改 `nginx.conf` 的后端端口并重新构建。
+
 ## 说明
 
 后端 `POST /api/chat` 接收 `{ "prompt": "..." }`，默认通过 SSE 流式

@@ -1,0 +1,9 @@
+**
+!go.mod
+!go.sum
+!main.go
+!internal/
+!internal/**
+!config.yaml
+!Dockerfile
+!.dockerignore
