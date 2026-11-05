@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"Finance/internal/response"
 	"Finance/internal/service"
 	"errors"
 	"log"
@@ -25,21 +26,21 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 func (h *UserHandler) Register(c *gin.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": 1, "message": "invalid registration request"})
+		response.Error(c, http.StatusBadRequest, "invalid registration request")
 		return
 	}
 	user, err := h.userService.Register(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrInvalidRegistration):
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": 1, "message": err.Error()})
+			response.Error(c, http.StatusBadRequest, err.Error())
 		case errors.Is(err, service.ErrUsernameTaken):
-			c.AbortWithStatusJSON(http.StatusConflict, gin.H{"code": 1, "message": "username already exists"})
+			response.Error(c, http.StatusConflict, "username already exists")
 		default:
 			log.Printf("register user: %v", err)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "registration failed"})
+			response.Error(c, http.StatusInternalServerError, "registration failed")
 		}
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"code": 0, "message": "success", "data": user})
+	response.Success(c, http.StatusCreated, user)
 }

@@ -1,7 +1,16 @@
-###
+### Chat
 POST http://localhost:8080/api/chat
 content-type: application/json
 
 {
     "prompt": "现在几点"
+}
+
+### Register
+POST http://localhost:8080/api/register
+content-type: application/json
+
+{
+    "username": "demo_user",
+    "password": "DemoPass123!"
 }

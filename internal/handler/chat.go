@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"Finance/internal/response"
 	"Finance/internal/service"
 	"encoding/json"
 	"fmt"
@@ -28,19 +29,12 @@ func NewChatHandler(chatService *service.ChatService) *ChatHandler {
 func (chat *ChatHandler) Chat(c *gin.Context) {
 	var req chatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": "wrong request parameters",
-		})
+		response.Error(c, http.StatusBadRequest, "wrong request parameters")
 		return
 	}
 
 	if strings.TrimSpace(req.Prompt) == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": "prompt must not be empty",
-		},
-		)
+		response.Error(c, http.StatusBadRequest, "prompt must not be empty")
 		return
 	}
 	c.Header("Content-Type", "text/event-stream; charset=utf-8")
