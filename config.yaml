@@ -3,6 +3,10 @@ llm:
   base_url: 
   model: 
 
+jwt:
+  secret: 
+  ttl: 2h
+
 app:
   address: 0.0.0.0
   port: 8080

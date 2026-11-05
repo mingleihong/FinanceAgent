@@ -22,6 +22,11 @@ type AppConfig struct {
 	Port    int    `mapstructure:"port"`
 }
 
+type JWTConfig struct {
+	Secret string        `mapstructure:"secret"`
+	TTL    time.Duration `mapstructure:"ttl"`
+}
+
 type PostgresConfig struct {
 	User            string        `mapstructure:"user"`
 	Password        string        `mapstructure:"password"`
@@ -36,6 +41,7 @@ type PostgresConfig struct {
 }
 
 type Config struct {
+	JWT      *JWTConfig      `mapstructure:"jwt"`
 	LLM      *LLMConfig      `mapstructure:"llm"`
 	App      *AppConfig      `mapstructure:"app"`
 	Postgres *PostgresConfig `mapstructure:"postgres"`
@@ -58,6 +64,12 @@ func Load() (*Config, error) {
 	cfg := &Config{}
 	if err := v.Unmarshal(cfg); err != nil {
 		return nil, err
+	}
+	if cfg.JWT == nil || len(cfg.JWT.Secret) < 32 {
+		return nil, errors.New("jwt.secret must contain at least 32 bytes; set JWT_SECRET")
+	}
+	if cfg.JWT.TTL < time.Second {
+		return nil, errors.New("jwt.ttl must be at least 1s")
 	}
 	return cfg, nil
 }

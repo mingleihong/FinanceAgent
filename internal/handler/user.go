@@ -12,7 +12,12 @@ import (
 
 type registerRequest struct {
 	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required,min=8"`
+	Password string `json:"password" binding:"required"`
+}
+
+type loginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 type UserHandler struct {
@@ -21,6 +26,27 @@ type UserHandler struct {
 
 func NewUserHandler(userService *service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
+}
+
+func (h *UserHandler) Login(c *gin.Context) {
+	var req loginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "invalid login request")
+		return
+	}
+	result, err := h.userService.Login(c.Request.Context(), req.Username, req.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrInvalidCredentials):
+			response.Error(c, http.StatusUnauthorized, "invalid username or password")
+		default:
+			log.Printf("login user: %v", err)
+			response.Error(c, http.StatusInternalServerError, "login failed")
+		}
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	response.Success(c, http.StatusOK, result)
 }
 
 func (h *UserHandler) Register(c *gin.Context) {

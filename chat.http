@@ -14,3 +14,12 @@ content-type: application/json
     "username": "demo_user",
     "password": "DemoPass123!"
 }
+
+### Login
+POST http://localhost:8080/api/login
+content-type: application/json
+
+{
+    "username": "demo_user",
+    "password": "DemoPass123!"
+}

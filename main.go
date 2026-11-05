@@ -28,7 +28,7 @@ func main() {
 	}
 	defer pool.Close()
 	userRep := repository.NewUserRep(pool)
-	userService := service.NewUserService(userRep)
+	userService := service.NewUserService(userRep, cfg.JWT)
 	userHandler := handler.NewUserHandler(userService)
 
 	llm := core.NewLLM(cfg.LLM)

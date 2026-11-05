@@ -11,6 +11,7 @@ func NewRouter(chatHandler *handler.ChatHandler, userHandler *handler.UserHandle
 	api := r.Group("/api")
 	{
 		api.POST("/register", userHandler.Register)
+		api.POST("/login", userHandler.Login)
 		api.POST("/chat", chatHandler.Chat)
 	}
 
