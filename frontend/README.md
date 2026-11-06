@@ -46,7 +46,7 @@ docker compose up -d --build
 - 用户名去除首尾空白后须为 1–64 个 Unicode 字符，不能包含空字符；密码必填且最多 72 个 UTF-8 字节，与后端约束一致。
 - 登录读取 `data.access_token` 与 `data.token_type`，在当前浏览器的 `localStorage` 中以 `finance.session` 为键保存凭证；刷新、关闭标签页或重启浏览器后可恢复登录，直到 Token 过期或主动退出，不保存密码。禁用浏览器存储时仅保留内存登录态。
 - 前端依据 JWT 的 `exp` 处理过期，聊天请求携带 `Authorization: Bearer <token>`；收到 HTTP 401 时返回登录页。退出或过期时终止当前聊天请求并清空当前对话。
-- 当前后端 `/api/chat` 尚未配置 JWT 校验中间件，前端登录态控制不能替代服务端鉴权。退出登录清除本地凭证，后端目前没有 Token 撤销接口。
+- 后端 `/api/chat` 通过 JWT 中间件校验 Bearer Token，限定 HS256 算法，校验签名、必填的过期时间与用户身份字段；缺少凭证、签名无效或过期时返回统一 JSON 错误（HTTP 401），不会启动 SSE。注册和登录接口保持公开。退出登录清除本地凭证，后端目前没有 Token 撤销接口。
 
 ## 聊天说明
 

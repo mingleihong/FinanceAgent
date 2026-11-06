@@ -38,7 +38,7 @@ func main() {
 	chatService := service.NewChatService(agent)
 	chatHandler := handler.NewChatHandler(chatService)
 
-	r := router.NewRouter(chatHandler, userHandler)
+	r := router.NewRouter(chatHandler, userHandler, cfg.JWT)
 	if err = r.Run(fmt.Sprintf("%s:%d", cfg.App.Address, cfg.App.Port)); err != nil {
 		panic(err)
 	}
