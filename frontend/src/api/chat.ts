@@ -2,17 +2,24 @@ import type { ChatEvent } from '../types'
 
 const API_ENDPOINT = '/api/chat'
 
+export class AuthenticationError extends Error {}
+
 /** Reads SSE frames independently of network chunk and UTF-8 boundaries. */
 export async function streamMessage(
   prompt: string,
   onDelta: (event: ChatEvent, content: string) => void,
   signal?: AbortSignal,
+  accessToken?: string,
 ): Promise<void> {
   let res: Response
   try {
     res = await fetch(API_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
       body: JSON.stringify({ prompt }),
       signal,
     })
@@ -22,6 +29,7 @@ export async function streamMessage(
   }
 
   if (!res.ok) {
+    if (res.status === 401) throw new AuthenticationError('登录已失效，请重新登录。')
     const body = await res.json().catch(() => null)
     throw new Error(typeof body?.message === 'string' ? body.message : `请求失败（HTTP ${res.status}）`)
   }

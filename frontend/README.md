@@ -1,6 +1,6 @@
 # 智投顾问 · 前端
 
-金融建议 Agent 的 React 聊天页面。
+金融建议 Agent 的 React 注册、登录与聊天页面。
 
 ## 技术栈
 
@@ -39,7 +39,16 @@ docker compose up -d --build
 后端继续使用现有 `.env` 和 `config.yaml`，无需新增环境变量。
 若修改 `config.yaml` 中的 `app.port`，需同步修改 `nginx.conf` 的后端端口并重新构建。
 
-## 说明
+## 注册与登录
+
+- `POST /api/register` 和 `POST /api/login` 均发送 `{ "username": "...", "password": "..." }`。
+- 使用后端统一响应格式 `{ "code": 0, "message": "success", "data": ... }`；注册成功后切换到登录页，保留用户名并清除密码。
+- 用户名去除首尾空白后须为 1–64 个 Unicode 字符，不能包含空字符；密码必填且最多 72 个 UTF-8 字节，与后端约束一致。
+- 登录读取 `data.access_token` 与 `data.token_type`，在当前浏览器的 `localStorage` 中以 `finance.session` 为键保存凭证；刷新、关闭标签页或重启浏览器后可恢复登录，直到 Token 过期或主动退出，不保存密码。禁用浏览器存储时仅保留内存登录态。
+- 前端依据 JWT 的 `exp` 处理过期，聊天请求携带 `Authorization: Bearer <token>`；收到 HTTP 401 时返回登录页。退出或过期时终止当前聊天请求并清空当前对话。
+- 当前后端 `/api/chat` 尚未配置 JWT 校验中间件，前端登录态控制不能替代服务端鉴权。退出登录清除本地凭证，后端目前没有 Token 撤销接口。
+
+## 聊天说明
 
 后端 `POST /api/chat` 接收 `{ "prompt": "..." }`，默认通过 SSE 流式
 返回 `reasoning_content`（思考内容）、`content`（回答增量）、`done` 或 `error` 事件。
@@ -52,7 +61,7 @@ docker compose up -d --build
 | `done` | `{}` | 结束生成状态，允许继续发送 |
 | `error` | `{ "message": "错误说明" }` | 显示错误，结束生成状态 |
 
-前端只有 `streamMessage` 一个请求入口，回调参数为 `(event, content)`。
+聊天请求入口为 `streamMessage`，回调参数为 `(event, content)`。
 请求参数校验失败时读取 HTTP 错误响应的 `message`；流中断且未收到 `done`
 时显示回答可能不完整，并保留已经收到的思考和正文。
 
