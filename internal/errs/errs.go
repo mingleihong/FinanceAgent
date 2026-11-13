@@ -15,14 +15,12 @@ const (
 	ErrInternalServer   Code = 10000
 	ErrInvalidParam     Code = 10001
 	ErrUnauthorized     Code = 10002
-	ErrForbidden        Code = 10003
-	ErrNotFound         Code = 10004
-	ErrMethodNotAllowed Code = 10005
+	ErrNotFound         Code = 10003
+	ErrMethodNotAllowed Code = 10004
 
 	// 用户 20xxx
-	ErrUserNotFound       Code = 20001
-	ErrUserExists         Code = 20002
-	ErrInvalidCredentials Code = 20003
+	ErrUserExists         Code = 20001
+	ErrInvalidCredentials Code = 20002
 
 	// 聊天 30xxx
 	ErrChatFailed Code = 30001
@@ -38,11 +36,9 @@ var defs = map[Code]definition{
 	ErrInternalServer:   {"服务器内部错误", http.StatusInternalServerError},
 	ErrInvalidParam:     {"参数错误", http.StatusBadRequest},
 	ErrUnauthorized:     {"未登录或登录已过期", http.StatusUnauthorized},
-	ErrForbidden:        {"无权限访问", http.StatusForbidden},
 	ErrNotFound:         {"资源不存在", http.StatusNotFound},
 	ErrMethodNotAllowed: {"请求方法不支持", http.StatusMethodNotAllowed},
 
-	ErrUserNotFound:       {"用户不存在", http.StatusNotFound},
 	ErrUserExists:         {"用户已存在", http.StatusConflict},
 	ErrInvalidCredentials: {"用户名或密码错误", http.StatusUnauthorized},
 
@@ -92,10 +88,11 @@ func Wrap(code Code, err error) *AppError {
 	return e
 }
 
-func From(err error) (*AppError, bool) {
+// From 提取错误链中的 AppError；未找到（包括 nil）时包装为内部错误。
+func From(err error) *AppError {
 	var e *AppError
 	if errors.As(err, &e) && e != nil {
-		return e, true
+		return e
 	}
-	return nil, false
+	return Wrap(ErrInternalServer, err)
 }

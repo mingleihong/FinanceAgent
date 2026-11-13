@@ -61,10 +61,7 @@ func Fail(c *gin.Context, err error) {
 		return
 	}
 
-	e, ok := errs.From(err)
-	if !ok {
-		e = errs.Wrap(errs.ErrInternalServer, err)
-	}
+	e := errs.From(err)
 
 	if e.HTTPCode >= http.StatusInternalServerError {
 		log.Printf("request failed: method=%s path=%s error=%v", c.Request.Method, c.Request.URL.Path, err)
