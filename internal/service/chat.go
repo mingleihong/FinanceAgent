@@ -2,7 +2,9 @@ package service
 
 import (
 	"Finance/internal/core"
+	"Finance/internal/errs"
 	"context"
+	"strings"
 
 	"github.com/openai/openai-go/v3"
 )
@@ -18,7 +20,16 @@ func NewChatService(agent *core.Agent) *ChatService {
 }
 
 func (chat *ChatService) Chat(ctx context.Context, prompt string, onDelta func(event string, content string) error) error {
-	return chat.agent.Run(ctx, []openai.ChatCompletionMessageParamUnion{
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" {
+		return errs.Newf(errs.ErrInvalidParam, "消息不能为空")
+	}
+
+	err := chat.agent.Run(ctx, []openai.ChatCompletionMessageParamUnion{
 		openai.UserMessage(prompt),
 	}, onDelta)
+	if err != nil {
+		return errs.Wrap(errs.ErrChatFailed, err)
+	}
+	return nil
 }

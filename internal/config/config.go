@@ -63,7 +63,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{}
 	if err := v.Unmarshal(cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode config.yaml: %w", err)
 	}
 	if cfg.JWT == nil || len(cfg.JWT.Secret) < 32 {
 		return nil, errors.New("jwt.secret must contain at least 32 bytes; set JWT_SECRET")

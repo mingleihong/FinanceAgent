@@ -1,11 +1,9 @@
 package handler
 
 import (
+	"Finance/internal/errs"
 	"Finance/internal/response"
 	"Finance/internal/service"
-	"errors"
-	"log"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,42 +29,28 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 func (h *UserHandler) Login(c *gin.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "invalid login request")
+		response.Fail(c, errs.Wrap(errs.ErrInvalidParam, err))
 		return
 	}
 	result, err := h.userService.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		switch {
-		case errors.Is(err, service.ErrInvalidCredentials):
-			response.Error(c, http.StatusUnauthorized, "invalid username or password")
-		default:
-			log.Printf("login user: %v", err)
-			response.Error(c, http.StatusInternalServerError, "login failed")
-		}
+		response.Fail(c, err)
 		return
 	}
 	c.Header("Cache-Control", "no-store")
-	response.Success(c, http.StatusOK, result)
+	response.Success(c, result)
 }
 
 func (h *UserHandler) Register(c *gin.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "invalid registration request")
+		response.Fail(c, errs.Wrap(errs.ErrInvalidParam, err))
 		return
 	}
 	user, err := h.userService.Register(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		switch {
-		case errors.Is(err, service.ErrInvalidRegistration):
-			response.Error(c, http.StatusBadRequest, err.Error())
-		case errors.Is(err, service.ErrUsernameTaken):
-			response.Error(c, http.StatusConflict, "username already exists")
-		default:
-			log.Printf("register user: %v", err)
-			response.Error(c, http.StatusInternalServerError, "registration failed")
-		}
+		response.Fail(c, err)
 		return
 	}
-	response.Success(c, http.StatusCreated, user)
+	response.Created(c, user)
 }

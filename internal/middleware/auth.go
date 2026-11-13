@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"Finance/internal/config"
+	"Finance/internal/errs"
 	"Finance/internal/model"
 	"Finance/internal/response"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -18,12 +18,12 @@ func JWTAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		headers := c.Request.Header.Values("Authorization")
 		if len(headers) != 1 {
-			unauthorized(c)
+			unauthorized(c, nil)
 			return
 		}
 		parts := strings.Fields(headers[0])
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			unauthorized(c)
+			unauthorized(c, nil)
 			return
 		}
 
@@ -32,12 +32,12 @@ func JWTAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 			return secret, nil
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired())
 		if err != nil {
-			unauthorized(c)
+			unauthorized(c, err)
 			return
 		}
 		userID, err := strconv.ParseInt(claims.Subject, 10, 64)
 		if err != nil {
-			unauthorized(c)
+			unauthorized(c, err)
 			return
 		}
 
@@ -47,8 +47,8 @@ func JWTAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 	}
 }
 
-func unauthorized(c *gin.Context) {
+func unauthorized(c *gin.Context, err error) {
 	c.Header("WWW-Authenticate", "Bearer")
 	c.Header("Cache-Control", "no-store")
-	response.Error(c, http.StatusUnauthorized, "invalid or expired access token")
+	response.Fail(c, errs.Wrap(errs.ErrUnauthorized, err))
 }

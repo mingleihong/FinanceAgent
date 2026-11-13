@@ -1,3 +1,5 @@
+import { apiErrorMessage } from './error'
+
 export interface Session {
   username: string
   accessToken: string
@@ -5,17 +7,6 @@ export interface Session {
 }
 
 const SESSION_KEY = 'finance.session'
-
-const errorMessages: Record<string, string> = {
-  'invalid login request': '请填写用户名和密码。',
-  'invalid registration request': '请填写完整的注册信息。',
-  'invalid username or password': '用户名或密码不正确。',
-  'username already exists': '该用户名已被注册，请更换用户名或直接登录。',
-  'login failed': '登录失败，请稍后重试。',
-  'registration failed': '注册失败，请稍后重试。',
-  'invalid registration: username must contain 1 to 64 characters and no null characters': '用户名须为 1–64 个字符，且不能包含空字符。',
-  'invalid registration: password must not exceed 72 bytes': '密码不能超过 72 字节。',
-}
 
 async function request(path: 'login' | 'register', username: string, password: string, signal: AbortSignal): Promise<unknown> {
   let response: Response
@@ -33,8 +24,7 @@ async function request(path: 'login' | 'register', username: string, password: s
   }
   const body = await response.json().catch(() => null)
   if (!response.ok || body?.code !== 0) {
-    const message = typeof body?.message === 'string' ? errorMessages[body.message] : undefined
-    throw new Error(message ?? (response.status === 429 ? '操作过于频繁，请稍后重试。' : '请求失败，请稍后重试。'))
+    throw new Error(apiErrorMessage(body, response.status === 429 ? '操作过于频繁，请稍后重试。' : '请求失败，请稍后重试。'))
   }
   return body.data
 }

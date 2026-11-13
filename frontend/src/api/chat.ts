@@ -1,4 +1,5 @@
 import type { ChatEvent } from '../types'
+import { apiErrorMessage } from './error'
 
 const API_ENDPOINT = '/api/chat'
 
@@ -29,9 +30,10 @@ export async function streamMessage(
   }
 
   if (!res.ok) {
-    if (res.status === 401) throw new AuthenticationError('登录已失效，请重新登录。')
     const body = await res.json().catch(() => null)
-    throw new Error(typeof body?.message === 'string' ? body.message : `请求失败（HTTP ${res.status}）`)
+    const message = apiErrorMessage(body, `请求失败（HTTP ${res.status}）`)
+    if (res.status === 401) throw new AuthenticationError(message)
+    throw new Error(message)
   }
   if (!res.body || !res.headers.get('content-type')?.includes('text/event-stream')) {
     throw new Error('服务器未返回流式响应')
@@ -61,9 +63,11 @@ export async function streamMessage(
     } catch {
       throw new Error('服务器返回了无法解析的数据')
     }
-    const body = payload as { content?: unknown; message?: unknown } | null
+    const body = payload as { code?: unknown; content?: unknown; message?: unknown } | null
     if (event === 'error') {
-      throw new Error(typeof body?.message === 'string' ? body.message : '回答生成失败，请稍后重试')
+      const message = apiErrorMessage(body, '回答生成失败，请稍后重试')
+      if (body?.code === 10002) throw new AuthenticationError(message)
+      throw new Error(message)
     }
     if (typeof body?.content !== 'string') {
       throw new Error('服务器返回了无效的流式内容')

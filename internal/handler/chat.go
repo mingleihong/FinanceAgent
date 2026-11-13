@@ -1,19 +1,15 @@
 package handler
 
 import (
+	"Finance/internal/errs"
 	"Finance/internal/response"
 	"Finance/internal/service"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
 type chatRequest struct {
-	Prompt string `json:"prompt"`
+	Prompt string `json:"prompt" binding:"required"`
 }
 
 type ChatHandler struct {
@@ -29,40 +25,18 @@ func NewChatHandler(chatService *service.ChatService) *ChatHandler {
 func (chat *ChatHandler) Chat(c *gin.Context) {
 	var req chatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "wrong request parameters")
+		response.Fail(c, errs.Wrap(errs.ErrInvalidParam, err))
 		return
 	}
 
-	if strings.TrimSpace(req.Prompt) == "" {
-		response.Error(c, http.StatusBadRequest, "prompt must not be empty")
-		return
-	}
-	c.Header("Content-Type", "text/event-stream; charset=utf-8")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("X-Accel-Buffering", "no")
-	c.Status(http.StatusOK)
-	c.Writer.Flush()
-	send := func(event string, payload any) error {
-		if err := c.Request.Context().Err(); err != nil {
-			return err
-		}
-		data, err := json.Marshal(payload)
-		if err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(c.Writer, "event: %s\ndata: %s\n\n", event, data); err != nil {
-			return err
-		}
-		c.Writer.Flush()
-		return nil
-	}
 	err := chat.chatService.Chat(c.Request.Context(), req.Prompt, func(event string, content string) error {
-		return send(event, gin.H{"content": content})
+		return response.SSE(c, event, gin.H{"content": content})
 	})
 	if err != nil {
-		log.Printf("Error in chat stream: %v", err)
-		_ = send("error", gin.H{"message": "回答生成失败，请稍后重试"})
+		response.Fail(c, err)
 		return
 	}
-	_ = send("done", gin.H{})
+	if err := response.SSE(c, "done", gin.H{}); err != nil {
+		response.Fail(c, err)
+	}
 }
