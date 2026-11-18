@@ -37,3 +37,6 @@ coverage.html
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# WorkBuddy local working memory
+.workbuddy/memory/
