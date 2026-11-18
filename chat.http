@@ -27,3 +27,8 @@ content-type: application/json
     "username": "demo_user",
     "password": "DemoPass123!"
 }
+
+### Create Session (先执行 Login 获取 Token)
+POST http://localhost:8080/api/sessions
+content-type: application/json
+Authorization: Bearer {{accessToken}}

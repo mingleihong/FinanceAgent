@@ -37,6 +37,9 @@ func run() error {
 	userRep := repository.NewUserRep(pool)
 	userService := service.NewUserService(userRep, cfg.JWT)
 	userHandler := handler.NewUserHandler(userService)
+	sessionRep := repository.NewSessionRep(pool)
+	sessionService := service.NewSessionService(sessionRep)
+	sessionHandler := handler.NewSessionHandler(sessionService)
 
 	llm := core.NewLLM(cfg.LLM)
 	registry := tool.NewRegistry()
@@ -47,7 +50,7 @@ func run() error {
 	chatService := service.NewChatService(agent)
 	chatHandler := handler.NewChatHandler(chatService)
 
-	r := router.NewRouter(chatHandler, userHandler, cfg.JWT)
+	r := router.NewRouter(chatHandler, userHandler, sessionHandler, cfg.JWT)
 	if err = r.Run(fmt.Sprintf("%s:%d", cfg.App.Address, cfg.App.Port)); err != nil {
 		return fmt.Errorf("run HTTP server: %w", err)
 	}

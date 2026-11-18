@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(chatHandler *handler.ChatHandler, userHandler *handler.UserHandler, jwtConfig *config.JWTConfig) *gin.Engine {
+func NewRouter(chatHandler *handler.ChatHandler, userHandler *handler.UserHandler, sessionHandler *handler.SessionHandler, jwtConfig *config.JWTConfig) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.CustomRecoveryWithWriter(nil, func(c *gin.Context, recovered any) {
 		response.Fail(c, errs.Wrap(errs.ErrInternalServer, fmt.Errorf("panic: %v\n%s", recovered, debug.Stack())))
