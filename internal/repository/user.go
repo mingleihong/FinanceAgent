@@ -25,8 +25,8 @@ func NewUserRep(db *pgxpool.Pool) *UserRep {
 }
 
 // FindByUsername returns the user including the hash for password verification.
-func (r *UserRep) FindByUsername(ctx context.Context, username string) (*model.User, error) {
-	user := &model.User{}
+func (r *UserRep) FindByUsername(ctx context.Context, username string) (*model.UserEntity, error) {
+	user := &model.UserEntity{}
 	err := r.db.QueryRow(ctx, `
 		SELECT id, username, created_at, password_hash
 		FROM users
@@ -41,8 +41,8 @@ func (r *UserRep) FindByUsername(ctx context.Context, username string) (*model.U
 	return user, nil
 }
 
-func (r *UserRep) Create(ctx context.Context, username, passwordHash string) (*model.User, error) {
-	user := &model.User{PasswordHash: passwordHash}
+func (r *UserRep) Create(ctx context.Context, username, passwordHash string) (*model.UserEntity, error) {
+	user := &model.UserEntity{PasswordHash: passwordHash}
 	err := r.db.QueryRow(ctx, `
 		INSERT INTO users (username, password_hash)
 		VALUES ($1, $2)

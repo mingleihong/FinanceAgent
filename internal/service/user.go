@@ -84,5 +84,9 @@ func (s *UserService) Register(ctx context.Context, username, password string) (
 	if err != nil {
 		return nil, errs.Wrap(errs.ErrInternalServer, err)
 	}
-	return user, nil
+	return &model.User{
+		ID:        strconv.FormatInt(user.ID, 10),
+		Username:  user.Username,
+		CreatedAt: user.CreatedAt,
+	}, nil
 }
