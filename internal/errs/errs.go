@@ -3,14 +3,12 @@ package errs
 import (
 	"errors"
 	"fmt"
-	"net/http"
 )
 
+// Code 业务错误码，按模块分段：1xxxx 通用，2xxxx 用户，3xxxx 聊天。
 type Code int
 
 const (
-	Success Code = 0
-
 	// 通用 10xxx
 	ErrInternalServer   Code = 10000
 	ErrInvalidParam     Code = 10001
@@ -26,31 +24,24 @@ const (
 	ErrChatFailed Code = 30001
 )
 
-// 每个错误码的默认文案 + HTTP 状态码，集中维护
-type definition struct {
-	msg      string
-	httpCode int
+// messages 只维护对外文案；HTTP 状态码属于传输层，由 response 包映射。
+var messages = map[Code]string{
+	ErrInternalServer:     "服务器内部错误",
+	ErrInvalidParam:       "参数错误",
+	ErrUnauthorized:       "未登录或登录已过期",
+	ErrNotFound:           "资源不存在",
+	ErrMethodNotAllowed:   "请求方法不支持",
+	ErrUserExists:         "用户已存在",
+	ErrInvalidCredentials: "用户名或密码错误",
+	ErrChatFailed:         "回答生成失败，请稍后重试",
 }
 
-var defs = map[Code]definition{
-	ErrInternalServer:   {"服务器内部错误", http.StatusInternalServerError},
-	ErrInvalidParam:     {"参数错误", http.StatusBadRequest},
-	ErrUnauthorized:     {"未登录或登录已过期", http.StatusUnauthorized},
-	ErrNotFound:         {"资源不存在", http.StatusNotFound},
-	ErrMethodNotAllowed: {"请求方法不支持", http.StatusMethodNotAllowed},
-
-	ErrUserExists:         {"用户已存在", http.StatusConflict},
-	ErrInvalidCredentials: {"用户名或密码错误", http.StatusUnauthorized},
-
-	ErrChatFailed: {"回答生成失败，请稍后重试", http.StatusInternalServerError},
-}
-
-// AppError 是贯穿全链路的业务错误
+// AppError 贯穿全链路的业务错误。
+// Msg 可安全返回前端；Err 仅用于日志，绝不进入响应。
 type AppError struct {
-	Code     Code
-	Msg      string // 对外消息，可安全返回前端
-	HTTPCode int
-	Err      error // 原始错误，仅用于日志，绝不返回前端
+	Code Code
+	Msg  string
+	Err  error // 原始错误，仅用于日志
 }
 
 func (e *AppError) Error() string {
@@ -62,37 +53,47 @@ func (e *AppError) Error() string {
 
 func (e *AppError) Unwrap() error { return e.Err }
 
-// ---- 构造函数 ----
-
-// New 使用默认文案
-func New(code Code) *AppError {
-	d, ok := defs[code]
+func message(code Code) string {
+	msg, ok := messages[code]
 	if !ok {
-		d = defs[ErrInternalServer]
-		code = ErrInternalServer
+		panic(fmt.Sprintf("errs: code %d has no message defined", code))
 	}
-	return &AppError{Code: code, Msg: d.msg, HTTPCode: d.httpCode}
+	return msg
 }
 
-// Newf 覆盖文案（如"用户 %s 不存在"）
+// New 用默认文案构造业务错误。
+func New(code Code) *AppError {
+	return &AppError{Code: code, Msg: message(code)}
+}
+
+// Newf 覆盖默认文案。format 必须是可直接返回前端的静态文案，
+// 禁止拼接原始错误、SQL 或堆栈等内部信息。
 func Newf(code Code, format string, args ...any) *AppError {
 	e := New(code)
 	e.Msg = fmt.Sprintf(format, args...)
 	return e
 }
 
-// Wrap 携带底层原始错误（日志用）
+// Wrap 把 err 归一化为 AppError：
+// - err 链中已有 AppError 时原样返回，保留其业务码，避免被外层覆盖；
+// - err 为普通错误时用 code 分类，原错误挂到链上仅用于日志。
+// 用 Wrap(ErrInternalServer, err) 可作为无明确业务码时的兜底归一化。
 func Wrap(code Code, err error) *AppError {
-	e := New(code)
-	e.Err = err
-	return e
+	if err == nil {
+		return New(code)
+	}
+	var inner *AppError
+	if errors.As(err, &inner) && inner != nil {
+		return inner
+	}
+	return &AppError{Code: code, Msg: message(code), Err: err}
 }
 
-// From 提取错误链中的 AppError；未找到（包括 nil）时包装为内部错误。
-func From(err error) *AppError {
+// CodeOf 提取错误链中的业务码。
+func CodeOf(err error) (Code, bool) {
 	var e *AppError
 	if errors.As(err, &e) && e != nil {
-		return e
+		return e.Code, true
 	}
-	return Wrap(ErrInternalServer, err)
+	return 0, false
 }

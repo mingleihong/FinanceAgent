@@ -18,12 +18,12 @@ func JWTAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		headers := c.Request.Header.Values("Authorization")
 		if len(headers) != 1 {
-			unauthorized(c, nil)
+			unauthorized(c)
 			return
 		}
 		parts := strings.Fields(headers[0])
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			unauthorized(c, nil)
+			unauthorized(c)
 			return
 		}
 
@@ -32,12 +32,12 @@ func JWTAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 			return secret, nil
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired())
 		if err != nil {
-			unauthorized(c, err)
+			unauthorized(c)
 			return
 		}
 		userID, err := strconv.ParseInt(claims.Subject, 10, 64)
 		if err != nil {
-			unauthorized(c, err)
+			unauthorized(c)
 			return
 		}
 
@@ -47,8 +47,8 @@ func JWTAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 	}
 }
 
-func unauthorized(c *gin.Context, err error) {
+func unauthorized(c *gin.Context) {
 	c.Header("WWW-Authenticate", "Bearer")
 	c.Header("Cache-Control", "no-store")
-	response.Fail(c, errs.Wrap(errs.ErrUnauthorized, err))
+	response.Fail(c, errs.New(errs.ErrUnauthorized))
 }

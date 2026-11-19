@@ -13,6 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// successCode 成功响应码，协议层定义，不占用 errs 的业务错误码空间。
+const successCode = 0
+
 // Body is the shared envelope for JSON responses and SSE error events.
 type Body struct {
 	Code    int    `json:"code"`
@@ -20,14 +23,33 @@ type Body struct {
 	Data    any    `json:"data,omitempty"`
 }
 
+// statusByCode 把业务码映射为 HTTP 状态码，HTTP 关注点集中在传输层。
+var statusByCode = map[errs.Code]int{
+	errs.ErrInternalServer:     http.StatusInternalServerError,
+	errs.ErrInvalidParam:       http.StatusBadRequest,
+	errs.ErrUnauthorized:       http.StatusUnauthorized,
+	errs.ErrNotFound:           http.StatusNotFound,
+	errs.ErrMethodNotAllowed:   http.StatusMethodNotAllowed,
+	errs.ErrUserExists:         http.StatusConflict,
+	errs.ErrInvalidCredentials: http.StatusUnauthorized,
+	errs.ErrChatFailed:         http.StatusInternalServerError,
+}
+
+func httpStatus(code errs.Code) int {
+	if status, ok := statusByCode[code]; ok {
+		return status
+	}
+	return http.StatusInternalServerError
+}
+
 // Success sends a successful response with HTTP 200.
 func Success(c *gin.Context, data any) {
-	c.JSON(http.StatusOK, Body{Code: int(errs.Success), Message: "ok", Data: data})
+	c.JSON(http.StatusOK, Body{Code: successCode, Message: "ok", Data: data})
 }
 
 // Created sends a successful response with HTTP 201.
 func Created(c *gin.Context, data any) {
-	c.JSON(http.StatusCreated, Body{Code: int(errs.Success), Message: "ok", Data: data})
+	c.JSON(http.StatusCreated, Body{Code: successCode, Message: "ok", Data: data})
 }
 
 // SSE starts the stream on its first event and writes one complete event.
@@ -56,14 +78,17 @@ func SSE(c *gin.Context, event string, payload any) error {
 // Callers must still return to stop executing their current handler.
 // Once SSE starts, errors use the same envelope in an error event.
 func Fail(c *gin.Context, err error) {
+	if err == nil {
+		return
+	}
 	c.Abort()
 	if errors.Is(c.Request.Context().Err(), context.Canceled) {
 		return
 	}
 
-	e := errs.From(err)
-
-	if e.HTTPCode >= http.StatusInternalServerError {
+	e := errs.Wrap(errs.ErrInternalServer, err)
+	status := httpStatus(e.Code)
+	if status >= http.StatusInternalServerError {
 		log.Printf("request failed: method=%s path=%s error=%v", c.Request.Method, c.Request.URL.Path, err)
 	}
 
@@ -76,5 +101,5 @@ func Fail(c *gin.Context, err error) {
 		}
 		return
 	}
-	c.AbortWithStatusJSON(e.HTTPCode, body)
+	c.JSON(status, body)
 }
