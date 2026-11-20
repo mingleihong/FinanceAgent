@@ -1,13 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AuthenticationError, streamMessage } from './api/chat'
+import { createSession, listSessions } from './api/session'
+import type { SessionPage } from './api/session'
 import type { Message } from './types'
 import Header from './components/Header'
 import Welcome from './components/Welcome'
 import MessageList from './components/MessageList'
 import ChatInput from './components/ChatInput'
+import SessionList from './components/SessionList'
 import AuthPage from './components/AuthPage'
 import { readSession, saveSession } from './api/auth'
 import type { Session } from './api/auth'
+
+const PAGE_SIZE = 10
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(readSession)
@@ -17,6 +22,11 @@ export default function App() {
   const requestRef = useRef<AbortController | null>(null)
   const pending = messages[messages.length - 1]?.streaming ?? false
 
+  const [sessionPage, setSessionPage] = useState<SessionPage | null>(null)
+  const [sessionListLoading, setSessionListLoading] = useState(false)
+  const [sessionListError, setSessionListError] = useState('')
+  const [creatingSession, setCreatingSession] = useState(false)
+
   useEffect(() => () => requestRef.current?.abort(), [])
 
   function logout(notice = '') {
@@ -25,7 +35,54 @@ export default function App() {
     saveSession(null)
     setSession(null)
     setMessages([])
+    setSessionPage(null)
+    setSessionListError('')
     setAuthNotice(notice)
+  }
+
+  // 会话列表：仅登录态下加载；401 统一登出，其余错误就地展示。
+  const loadSessionPage = useCallback(async (page: number, token: string) => {
+    setSessionListLoading(true)
+    setSessionListError('')
+    try {
+      const data = await listSessions(page, PAGE_SIZE, token)
+      setSessionPage(data)
+    } catch (err) {
+      if (err instanceof AuthenticationError) {
+        logout(err.message)
+        return
+      }
+      setSessionListError(err instanceof Error ? err.message : '加载会话列表失败')
+    } finally {
+      setSessionListLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (session) void loadSessionPage(1, session.accessToken)
+  }, [session, loadSessionPage])
+
+  async function changeSessionPage(page: number) {
+    if (!session || !sessionPage || page < 1 || page > Math.ceil(sessionPage.total / PAGE_SIZE)) return
+    await loadSessionPage(page, session.accessToken)
+  }
+
+  async function createNewSession() {
+    if (!session || creatingSession) return
+    setCreatingSession(true)
+    setSessionListError('')
+    try {
+      await createSession(session.accessToken)
+      await loadSessionPage(1, session.accessToken)
+    } catch (err) {
+      if (err instanceof AuthenticationError) {
+        logout(err.message)
+        return
+      }
+      setSessionListError(err instanceof Error ? err.message : '创建会话失败')
+    } finally {
+      setCreatingSession(false)
+    }
   }
 
   useEffect(() => {
@@ -112,14 +169,32 @@ export default function App() {
   return (
     <div className="app">
       <Header username={session.username} onLogout={() => logout()} />
-      <div className="chat" ref={scrollRef}>
-        {showWelcome ? (
-          <Welcome onPick={send} />
-        ) : (
-          <MessageList messages={messages} />
-        )}
+      <div className="workspace">
+        <aside className="sidebar">
+          <SessionList
+            sessions={sessionPage?.list ?? []}
+            total={sessionPage?.total ?? 0}
+            page={sessionPage?.page ?? 1}
+            pageSize={PAGE_SIZE}
+            loading={sessionListLoading}
+            error={sessionListError}
+            creating={creatingSession}
+            onPageChange={(p) => void changeSessionPage(p)}
+            onRefresh={() => void loadSessionPage(sessionPage?.page ?? 1, session.accessToken)}
+            onCreate={() => void createNewSession()}
+          />
+        </aside>
+        <main className="chat-main">
+          <div className="chat" ref={scrollRef}>
+            {showWelcome ? (
+              <Welcome onPick={send} />
+            ) : (
+              <MessageList messages={messages} />
+            )}
+          </div>
+          <ChatInput disabled={pending} onSend={send} />
+        </main>
       </div>
-      <ChatInput disabled={pending} onSend={send} />
     </div>
   )
 }

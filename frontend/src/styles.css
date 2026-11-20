@@ -43,8 +43,169 @@ body {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
+}
+
+/* ---------- 两栏工作区 ---------- */
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 264px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.chat-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 会话列表 ---------- */
+.session-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 16px 12px;
+}
+
+.session-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 12px;
+}
+
+.session-panel-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.session-panel-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.session-panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.session-icon-button,
+.session-new-button {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.session-new-button {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+.session-icon-button:hover:not(:disabled),
+.session-new-button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.session-icon-button:disabled,
+.session-new-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.session-error {
+  margin: 0 4px 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.session-placeholder {
+  margin: 24px 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+}
+
+.session-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: default;
+}
+
+.session-item:hover {
+  background: var(--bg);
+}
+
+.session-item-title {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-item-time {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.session-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 12px 4px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.session-pager button {
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.session-pager button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ---------- 顶部栏 ---------- */
@@ -495,6 +656,15 @@ button:focus-visible, input:focus-visible {
 .logout-button { flex-shrink: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); background: var(--surface); font-size: 12px; cursor: pointer; }
 .logout-button:hover { background: var(--bg); }
 @media (max-width: 720px) {
+  .workspace { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .session-panel { padding: 12px; }
+  .chat-main { min-height: 0; }
   .auth-page { grid-template-columns: 1fr; }
   .auth-intro { padding: 24px; gap: 20px; }
   .auth-intro-content, .auth-disclaimer { display: none; }

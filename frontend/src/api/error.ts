@@ -1,5 +1,6 @@
 const errorMessages: Record<number, string> = {
   10000: '服务器内部错误，请稍后重试。',
+  10001: '参数错误，请检查输入。',
   10002: '登录已失效，请重新登录。',
   10003: '无权限访问。',
   10004: '资源不存在。',
@@ -9,6 +10,9 @@ const errorMessages: Record<number, string> = {
   20003: '用户名或密码不正确。',
   30001: '回答生成失败，请稍后重试。',
 }
+
+// 登录态失效，供各 API 模块复用，由 App 统一捕获并登出。
+export class AuthenticationError extends Error {}
 
 // Validation errors can carry a more specific, public message from the server.
 export function apiErrorMessage(body: unknown, fallback: string): string {

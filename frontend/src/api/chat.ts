@@ -1,9 +1,9 @@
 import type { ChatEvent } from '../types'
-import { apiErrorMessage } from './error'
+import { apiErrorMessage, AuthenticationError } from './error'
+
+export { AuthenticationError } from './error'
 
 const API_ENDPOINT = '/api/chat'
-
-export class AuthenticationError extends Error {}
 
 /** Reads SSE frames independently of network chunk and UTF-8 boundaries. */
 export async function streamMessage(
