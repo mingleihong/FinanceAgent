@@ -28,8 +28,13 @@ func NewRouter(chatHandler *handler.ChatHandler, userHandler *handler.UserHandle
 	{
 		api.POST("/register", userHandler.Register)
 		api.POST("/login", userHandler.Login)
-		api.POST("/chat", middleware.JWTAuth(jwtConfig), chatHandler.Chat)
-		api.POST("/sessions", middleware.JWTAuth(jwtConfig), sessionHandler.Create)
+		api.Use(middleware.JWTAuth(jwtConfig))
+		{
+			api.POST("/chat", chatHandler.Chat)
+			api.POST("/sessions", sessionHandler.Create)
+			api.GET("/sessions", sessionHandler.List)
+		}
+
 	}
 
 	return r

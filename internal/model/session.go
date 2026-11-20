@@ -20,3 +20,11 @@ type Session struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// SessionPage 是会话列表分页查询的响应 DTO。
+type SessionPage struct {
+	List     []Session `json:"list"`
+	Total    int64     `json:"total"`
+	Page     int64     `json:"page"`
+	PageSize int64     `json:"page_size"`
+}
