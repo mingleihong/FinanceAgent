@@ -50,7 +50,7 @@ func run() error {
 		return fmt.Errorf("initialize tools: %w", err)
 	}
 	agent := core.NewAgent(llm, registry)
-	chatService := service.NewChatService(agent)
+	chatService := service.NewChatService(agent, sessionRep, messageRep)
 	chatHandler := handler.NewChatHandler(chatService)
 
 	r := router.NewRouter(chatHandler, userHandler, sessionHandler, messageHandler, cfg.JWT)

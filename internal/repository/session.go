@@ -21,6 +21,18 @@ func NewSessionRep(db *pgxpool.Pool) *SessionRep {
 	return &SessionRep{db: db}
 }
 
+// ExistsByIDAndUserID 判断会话是否存在且归属指定用户。
+// 用条件计数同时完成"存在"与"归属"校验，避免把他人会话泄露给调用方。
+func (r *SessionRep) ExistsByIDAndUserID(ctx context.Context, sessionID, userID int64) (bool, error) {
+	var count int
+	if err := r.db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM sessions WHERE id = $1 AND user_id = $2
+	`, sessionID, userID).Scan(&count); err != nil {
+		return false, fmt.Errorf("check session ownership: %w", err)
+	}
+	return count > 0, nil
+}
+
 // Create 为指定用户创建会话，返回表实体，标题使用数据库默认值。
 func (r *SessionRep) Create(ctx context.Context, userID int64) (*model.SessionEntity, error) {
 	entity := &model.SessionEntity{}
