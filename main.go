@@ -40,6 +40,9 @@ func run() error {
 	sessionRep := repository.NewSessionRep(pool)
 	sessionService := service.NewSessionService(sessionRep)
 	sessionHandler := handler.NewSessionHandler(sessionService)
+	messageRep := repository.NewMessageRep(pool)
+	messageService := service.NewMessageService(messageRep)
+	messageHandler := handler.NewMessageHandler(messageService)
 
 	llm := core.NewLLM(cfg.LLM)
 	registry := tool.NewRegistry()
@@ -50,7 +53,7 @@ func run() error {
 	chatService := service.NewChatService(agent)
 	chatHandler := handler.NewChatHandler(chatService)
 
-	r := router.NewRouter(chatHandler, userHandler, sessionHandler, cfg.JWT)
+	r := router.NewRouter(chatHandler, userHandler, sessionHandler, messageHandler, cfg.JWT)
 	if err = r.Run(fmt.Sprintf("%s:%d", cfg.App.Address, cfg.App.Port)); err != nil {
 		return fmt.Errorf("run HTTP server: %w", err)
 	}

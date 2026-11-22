@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(chatHandler *handler.ChatHandler, userHandler *handler.UserHandler, sessionHandler *handler.SessionHandler, jwtConfig *config.JWTConfig) *gin.Engine {
+func NewRouter(chatHandler *handler.ChatHandler, userHandler *handler.UserHandler, sessionHandler *handler.SessionHandler, messageHandler *handler.MessageHandler, jwtConfig *config.JWTConfig) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.CustomRecoveryWithWriter(nil, func(c *gin.Context, recovered any) {
 		response.Fail(c, errs.Wrap(errs.ErrInternalServer, fmt.Errorf("panic: %v\n%s", recovered, debug.Stack())))
@@ -33,6 +33,7 @@ func NewRouter(chatHandler *handler.ChatHandler, userHandler *handler.UserHandle
 			api.POST("/chat", chatHandler.Chat)
 			api.POST("/sessions", sessionHandler.Create)
 			api.GET("/sessions", sessionHandler.List)
+			api.GET("/sessions/:id/messages", messageHandler.ListBySession)
 		}
 
 	}
