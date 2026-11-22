@@ -5,9 +5,22 @@ export { AuthenticationError } from './error'
 
 const API_ENDPOINT = '/api/chat'
 
+/** 一轮对话内容，随 session_id 一起提交给后端。 */
+export interface ChatTurn {
+  role: 'user' | 'assistant'
+  content: string
+  reasoning_content?: string
+}
+
+export interface ChatPayload {
+  prompt: string
+  sessionId: string
+  messages: ChatTurn[]
+}
+
 /** Reads SSE frames independently of network chunk and UTF-8 boundaries. */
 export async function streamMessage(
-  prompt: string,
+  payload: ChatPayload,
   onDelta: (event: ChatEvent, content: string) => void,
   signal?: AbortSignal,
   accessToken?: string,
@@ -21,7 +34,11 @@ export async function streamMessage(
         Accept: 'text/event-stream',
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({
+        prompt: payload.prompt,
+        session_id: payload.sessionId,
+        messages: payload.messages,
+      }),
       signal,
     })
   } catch (err) {

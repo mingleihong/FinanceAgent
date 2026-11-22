@@ -7,10 +7,11 @@ interface Props {
   pageSize: number
   loading: boolean
   error: string
-  creating: boolean
+  activeId: string | null
   onPageChange: (page: number) => void
   onRefresh: () => void
-  onCreate: () => void
+  onSelect: (id: string) => void
+  onNewChat: () => void
 }
 
 function formatTime(value: string): string {
@@ -25,8 +26,8 @@ function formatTime(value: string): string {
 }
 
 export default function SessionList({
-  sessions, total, page, pageSize, loading, error, creating,
-  onPageChange, onRefresh, onCreate,
+  sessions, total, page, pageSize, loading, error, activeId,
+  onPageChange, onRefresh, onSelect, onNewChat,
 }: Props) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
@@ -41,8 +42,8 @@ export default function SessionList({
           <button type="button" className="session-icon-button" onClick={onRefresh} disabled={loading} title="刷新">
             刷新
           </button>
-          <button type="button" className="session-new-button" onClick={onCreate} disabled={creating || loading}>
-            {creating ? '创建中' : '+ 新会话'}
+          <button type="button" className="session-new-button" onClick={onNewChat} disabled={loading}>
+            + 新会话
           </button>
         </div>
       </div>
@@ -52,13 +53,20 @@ export default function SessionList({
       {loading ? (
         <p className="session-placeholder">加载中…</p>
       ) : sessions.length === 0 ? (
-        <p className="session-placeholder">还没有会话，点「+ 新会话」创建一个吧。</p>
+        <p className="session-placeholder">还没有会话，点「+ 新会话」开始聊天吧。</p>
       ) : (
         <ul className="session-list">
           {sessions.map((session) => (
-            <li key={session.id} className="session-item">
-              <span className="session-item-title" title={session.title}>{session.title}</span>
-              <span className="session-item-time">{formatTime(session.updated_at)}</span>
+            <li key={session.id}>
+              <button
+                type="button"
+                className={`session-item${session.id === activeId ? ' active' : ''}`}
+                onClick={() => onSelect(session.id)}
+                aria-current={session.id === activeId ? 'page' : undefined}
+              >
+                <span className="session-item-title" title={session.title}>{session.title}</span>
+                <span className="session-item-time">{formatTime(session.updated_at)}</span>
+              </button>
             </li>
           ))}
         </ul>

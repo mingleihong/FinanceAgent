@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AuthenticationError, streamMessage } from './api/chat'
+import type { ChatTurn } from './api/chat'
 import { createSession, listSessions } from './api/session'
 import type { SessionPage } from './api/session'
+import { listMessages } from './api/message'
 import type { Message } from './types'
 import Header from './components/Header'
 import Welcome from './components/Welcome'
@@ -18,23 +20,35 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(readSession)
   const [authNotice, setAuthNotice] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
+  // null 表示尚未绑定到服务端的「新聊天」页面，不产生任何会话记录。
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const requestRef = useRef<AbortController | null>(null)
+  const historyRef = useRef<AbortController | null>(null)
   const pending = messages[messages.length - 1]?.streaming ?? false
 
   const [sessionPage, setSessionPage] = useState<SessionPage | null>(null)
   const [sessionListLoading, setSessionListLoading] = useState(false)
   const [sessionListError, setSessionListError] = useState('')
-  const [creatingSession, setCreatingSession] = useState(false)
 
-  useEffect(() => () => requestRef.current?.abort(), [])
+  useEffect(() => () => {
+    requestRef.current?.abort()
+    historyRef.current?.abort()
+  }, [])
 
   function logout(notice = '') {
     requestRef.current?.abort()
+    historyRef.current?.abort()
     requestRef.current = null
+    historyRef.current = null
     saveSession(null)
     setSession(null)
     setMessages([])
+    setActiveSessionId(null)
+    setHistoryLoading(false)
+    setHistoryError('')
     setSessionPage(null)
     setSessionListError('')
     setAuthNotice(notice)
@@ -67,22 +81,55 @@ export default function App() {
     await loadSessionPage(page, session.accessToken)
   }
 
-  async function createNewSession() {
-    if (!session || creatingSession) return
-    setCreatingSession(true)
-    setSessionListError('')
+  // 点会话：切换视图并读取该会话的历史消息，不产生新的会话记录。
+  async function selectSession(id: string) {
+    if (!session) return
+    if (id === activeSessionId && !historyError) return
+    requestRef.current?.abort()
+    requestRef.current = null
+    historyRef.current?.abort()
+    const controller = new AbortController()
+    historyRef.current = controller
+    setActiveSessionId(id)
+    setMessages([])
+    setHistoryError('')
+    setHistoryLoading(true)
     try {
-      await createSession(session.accessToken)
-      await loadSessionPage(1, session.accessToken)
+      const history = await listMessages(id, session.accessToken, controller.signal)
+      if (historyRef.current !== controller) return
+      setMessages(history
+        .filter((item) => item.role === 'user' || item.role === 'assistant')
+        .map((item) => ({
+          id: item.id,
+          role: item.role as 'user' | 'assistant',
+          content: item.content,
+          ...(item.reasoning_content ? { reasoning_content: item.reasoning_content } : {}),
+        })))
     } catch (err) {
+      if (controller.signal.aborted) return
       if (err instanceof AuthenticationError) {
         logout(err.message)
         return
       }
-      setSessionListError(err instanceof Error ? err.message : '创建会话失败')
+      setHistoryError(err instanceof Error ? err.message : '加载聊天记录失败')
     } finally {
-      setCreatingSession(false)
+      if (historyRef.current === controller) {
+        historyRef.current = null
+        setHistoryLoading(false)
+      }
     }
+  }
+
+  // 点新会话：只进入空白聊天页，真正的会话在首次发送消息时才创建。
+  function startNewChat() {
+    requestRef.current?.abort()
+    historyRef.current?.abort()
+    requestRef.current = null
+    historyRef.current = null
+    setActiveSessionId(null)
+    setMessages([])
+    setHistoryLoading(false)
+    setHistoryError('')
   }
 
   useEffect(() => {
@@ -103,11 +150,21 @@ export default function App() {
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages])
+  }, [messages, historyLoading])
+
+  function toTurns(list: Message[]): ChatTurn[] {
+    return list
+      .filter((item) => (item.role === 'user' || item.role === 'assistant') && !item.streaming && !item.error && item.content.trim())
+      .map((item) => ({
+        role: item.role as 'user' | 'assistant',
+        content: item.content,
+        ...(item.reasoning_content ? { reasoning_content: item.reasoning_content } : {}),
+      }))
+  }
 
   async function send(prompt: string) {
     prompt = prompt.trim()
-    if (!prompt || requestRef.current || !session) return
+    if (!prompt || requestRef.current || !session || historyLoading) return
     if (session.expiresAt <= Date.now()) {
       logout('登录已过期，请重新登录。')
       return
@@ -128,23 +185,37 @@ export default function App() {
       streaming: true,
     }])
 
+    let targetSessionId = activeSessionId
     try {
-      await streamMessage(prompt, (event, content) => {
+      // 新聊天页首次发送：先建会话拿到 session_id，再发送对话内容。
+      if (!targetSessionId) {
+        const created = await createSession(session.accessToken)
+        if (controller.signal.aborted) return
+        targetSessionId = created.id
+        setActiveSessionId(created.id)
+        void loadSessionPage(1, session.accessToken)
+      }
+
+      await streamMessage({
+        prompt,
+        sessionId: targetSessionId,
+        messages: toTurns([...messages, userMessage]),
+      }, (event, content) => {
         setMessages((prev) => prev.map((message) => {
           if (message.id !== assistantID) return message
           return { ...message, [event]: (message[event] ?? '') + content }
         }))
       }, controller.signal, session.accessToken)
+
+      // 消息已由后端落库，刷新列表中的更新时间与排序。
+      void loadSessionPage(sessionPage?.page ?? 1, session.accessToken)
     } catch (err) {
       if (controller.signal.aborted) return
       if (err instanceof AuthenticationError) {
         logout(err.message)
         return
       }
-      const text =
-        err instanceof Error
-          ? err.message
-          : '出错了，请稍后重试'
+      const text = err instanceof Error ? err.message : '出错了，请稍后重试'
       setMessages((prev) => prev.map((message) => message.id === assistantID
         ? { ...message, error: text }
         : message))
@@ -156,7 +227,7 @@ export default function App() {
     }
   }
 
-  const showWelcome = messages.length === 0
+  const showWelcome = !historyLoading && !historyError && messages.length === 0
 
   if (!session) {
     return <AuthPage notice={authNotice} onLogin={(nextSession) => {
@@ -178,21 +249,33 @@ export default function App() {
             pageSize={PAGE_SIZE}
             loading={sessionListLoading}
             error={sessionListError}
-            creating={creatingSession}
+            activeId={activeSessionId}
             onPageChange={(p) => void changeSessionPage(p)}
             onRefresh={() => void loadSessionPage(sessionPage?.page ?? 1, session.accessToken)}
-            onCreate={() => void createNewSession()}
+            onSelect={(id) => void selectSession(id)}
+            onNewChat={startNewChat}
           />
         </aside>
         <main className="chat-main">
           <div className="chat" ref={scrollRef}>
-            {showWelcome ? (
+            {historyLoading ? (
+              <p className="chat-placeholder">正在加载聊天记录…</p>
+            ) : historyError ? (
+              <div className="chat-placeholder">
+                <p className="chat-error-text">{historyError}</p>
+                {activeSessionId && (
+                  <button type="button" className="chat-retry" onClick={() => void selectSession(activeSessionId)}>
+                    重试
+                  </button>
+                )}
+              </div>
+            ) : showWelcome ? (
               <Welcome onPick={send} />
             ) : (
               <MessageList messages={messages} />
             )}
           </div>
-          <ChatInput disabled={pending} onSend={send} />
+          <ChatInput disabled={pending || historyLoading} onSend={send} />
         </main>
       </div>
     </div>
